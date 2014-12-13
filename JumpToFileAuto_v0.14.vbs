@@ -243,11 +243,11 @@ Sub IzradiFormu
 		Script.RegisterEvent ButtonMoveAfterCurrent, "OnClick", "MoveAfterCurrent"	'pozovi playsong kod pritiska tipke
 		
 			'ChangeMode button name
-		ButtonCM.Caption = "&To Queue list"
+		ButtonCM.Caption = "&Open Queue list"
 	else
 		Form.Caption = "Queue list"							'Ime prozora
 			'ChangeMode button name
-		ButtonCM.Caption = "&To Jump to file"
+		ButtonCM.Caption = "&Open Jump to file"
 			'ButtonUp (move song up in playlist)
 		Set ButtonUp = SDB.UI.NewButton(Form)
 		ButtonUp.Common.SetClientRect 5, 415, 70, 20
@@ -333,14 +333,25 @@ End Sub
 
 	'Ispiši pjesme iz queue liste
 Sub ListQueuedSongs
-	dim i, objSongData, StringTitle, StringArtist
+	dim i, objSongData, StringTitle, StringArtist, Year, Rating
 	queueList = Empty
 	Set queueList = queuePlaylist.Tracks
 	for i = 0 to queueList.Count - 1
 		Set objSongData = queueList.Item(i)
 		StringTitle = objSongData.Title
 		StringArtist = objSongData.ArtistName
-		LB.Items.Add (i + 1) & ". " & StringArtist & " - " & Stringtitle
+		if objSongData.Year <= 0 Then
+			Year = ""
+		else
+			Year = " (" & objSongData.Year & ")"
+		End if
+		
+		if objSongData.Rating < 0 Then
+			Rating = ""
+		else
+			Rating = " - Rating: " & objSongData.Rating / 10
+		End if
+		LB.Items.Add (i + 1) & ". " & StringArtist & " - " & Stringtitle  + Year + Rating
 	Next		
 End Sub
 
@@ -608,7 +619,7 @@ Sub OnAddToQueueClicked
 	Set objSongData = GetSelectedSongData
 	AddToQueueList objSongData
 	
-	dim StringTitle, StringArtist, tmp_objSongData, j
+	dim StringTitle, StringArtist, Year, Rating, tmp_objSongData, j
 	Set queueList = queuePlaylist.Tracks
 	StringTitle = objSongData.Title
 	StringArtist = objSongData.ArtistName
@@ -620,18 +631,32 @@ Sub OnAddToQueueClicked
 			Set queueList = queuePlaylist.Tracks
 			StringTitle = tmp_objSongData.Title
 			StringArtist = tmp_objSongData.ArtistName
+			
+			if objSongData.Year <= 0 Then
+				Year = ""
+			else
+				Year = " (" & objSongData.Year & ")"
+			End if
+			
+			if objSongData.Rating < 0 Then
+				Rating = ""
+			else
+				Rating = " - Rating: " & objSongData.Rating / 10
+			End if
+			
 			for j = 0 to queueList.Count - 1
 				dim tmp_queueSongData
 				Set tmp_queueSongData = queueList.Item(j)
 				if  tmp_objSongData.Path = tmp_queueSongData.Path Then
-					LB.Items.Item(i) = StringArtist + " - " + Stringtitle + "    [" + CStr(j+1) + "]"
+					
+					LB.Items.Item(i) = StringArtist + " - " + Stringtitle +  + Year + Rating + "    [" + CStr(j+1) + "]"
 					'SDB.MessageBox j, mtInformation, Array(mbOk)
 					j = -1
 					Exit for
 				End if
 			Next
 			if j <> -1  And i = LB.ItemIndex Then
-				LB.Items.Item(i) = StringArtist + " - " + Stringtitle
+				LB.Items.Item(i) = StringArtist + " - " + Stringtitle  + Year + Rating
 			End if
 		Next
 		'SDB.MessageBox i, mtInformation, Array(mbOk)
