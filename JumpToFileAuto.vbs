@@ -32,6 +32,7 @@ Class CacheElement
 		getMaxSearchIndex = maxSearchIndex
 	End Function
 End Class
+
 	'songIndex 				- index pjesme koja se treba pustiti
 	'LB 					- za pristup listboxu
 	'objSearchSongList 		- lista svih pjesama iz nowplaying
@@ -63,6 +64,133 @@ dim objSongList
 dim exQueuedIndex : exQueuedIndex = -1
 dim forcePlay : forcePlay = false
 dim cache : Set cache = CreateObject("scripting.dictionary")
+dim searchObj : Set searchObj = new StandardSearch
+
+Class StandardSearch
+	Private Function test(objSongData, objRE)
+		test = NOT objRE.Test(objSongData.ArtistName) AND NOT objRE.Test(objSongData.Title)	AND NOT objRE.Test(objSongData.AlbumArtistName) AND NOT objRE.Test(objSongData.Year) AND NOT objRE.Test(objSongData.AlbumName) AND NOT objRE.Test(objSongData.Path)
+	End Function
+
+	Public Sub search(control)
+			'objRE 				- Regexp objekt za uspoređivanje stringova
+			'objSongData		- objekt za čitanje podatak o pjesmi
+			'i,j				- brojač petlje
+			'tmp_SearchSongList - privremena song lista za pohranu rezultata pretrage
+			'patternList		- lista s riječima unesenog teksta
+			'flag				- zastavica za provjeru je li petlja dosla do kraja
+		dim objRE, objSongData, i, tmp_SearchSongList, patternList, j, flag, item
+		dim text : text = control.text
+		flag = True
+		Set objRE = New RegExp
+		objRE.IgnoreCase = True						'Case unsensitive
+		objRE.Pattern = ex_tekst					'Kao traženi pojam uzmi tekst iz textboxa
+		
+		patternList = Split(text, " ")
+		brisiLB										'Briši pjesme iz LB-a
+		Set tmp_SearchSongList = SDB.NewSongList	'Napravi privremenu song listu
+		
+			'Ako nije unesen tekst izlistaj max pjesama oko trenutne i izađi iz procedure
+		if text = "" Then
+			maxSearchIndex = 0
+			'SDB.MessageBox "Tekst: " & control.text & ", index: " & maxSearchIndex, mtInformation, Array(mbOk)
+			objSearchSongList2 = Empty
+			ListSongs
+			Exit Sub
+			'Prvo prođi kroz dosad filtriranu listu ako postoji i ako nije brisan znak iz prethodnog unosa
+		Elseif not objRE.Test(text) Then
+			'SDB.MessageBox "Info", mtInformation, Array(mbOk)
+			maxSearchIndex = 0
+			if isObject(objSearchSongList2) Then
+				objSearchSongList2 = Empty
+			End if
+		End if
+			'Provjeri postoji li u cacheu
+		If cache.Exists(text) Then
+			Set item = cache(text)
+			maxSearchIndex = item.getMaxSearchIndex
+			Set tmp_SearchSongList = item.getObjSearchSongList
+			objSearchSongList2 = Empty
+				'Ispiši pjesme iz liste
+			for i = 0 to tmp_SearchSongList.Count - 1
+				ispisi tmp_SearchSongList, i
+			Next
+			'SDB.MessageBox "Index = " & maxSearchIndex & "\nCount tmp: " & tmp_SearchSongList.Count, mtInformation, Array(mbOk)
+		Elseif isObject(objSearchSongList2) Then
+			'SDB.MessageBox "Lista2.Count = " & objsearchSongList2.Count, mtInformation, Array(mbOk)
+			for i = 0 to objSearchSongList2.Count - 1
+				Set objSongData = objSearchSongList2.Item(i)		'pročitaj pjesmu iz filtrirane liste
+				'for each j in patternList
+				j = patternList(UBound(patternList))
+					'SDB.MessageBox "Tekst: " & j & ", index: " & maxSearchIndex & "\n i = " & i, mtInformation, Array(mbOk)
+					
+				'objRE.Pattern = normalize_str(j)				'Kao traženi pojam uzmi normaliziranu riječ iz textboxa
+				objRE.Pattern = j								'Kao traženi pojam uzmi riječ iz textboxa
+				
+					'usporedi objRE.pattern i podatke od pjesme
+				'If NOT objRE.Test(normalize_str(objSongData.ArtistName)) AND NOT objRE.Test(normalize_str(objSongData.Title)) AND NOT objRE.Test(normalize_str(objSongData.AlbumArtistName)) AND NOT objRE.Test(normalize_str(objSongData.Year)) AND NOT objRE.Test(normalize_str(objSongData.AlbumName)) AND NOT objRE.Test(normalize_str(objSongData.Path)) Then
+				If test(objSongData, objRE) Then			
+					flag = False
+					'Exit For
+					
+				End If
+				'Next
+				if flag Then
+					'SDB.MessageBox "Pjesma: " & objSongData.Title & "-" & objSongData.ArtistName, mtInformation, Array(mbOk)
+					tmp_SearchSongList.Add objSongData
+					ispisi objSearchSongList2, i					'Ispiši pjesmu koja odgovara traženom pojmu
+					'objSearchSongList2.Delete i
+				End if
+				flag = True
+				'SDB.MessageBox "Wait" & i, mtInformation, Array(mbOk)
+			Next
+			objSearchSongList2 = Empty
+		End if
+			'Traži pjesme iz nowplaying liste (od zadnje koja je provjeravana) koje sadrže traženi pojam 
+		i = maxSearchIndex
+		'SDB.MessageBox "i = " & i & "Index = " & maxSearchIndex & " tmp.Count = " & tmp_SearchSongList.Count, mtInformation, Array(mbOk)
+		Do while i < objSearchSongList.Count AND tmp_SearchSongList.Count < max
+			'SDB.MessageBox "i = " & i & " tmp.Count = " & tmp_SearchSongList.Count, mtInformation, Array(mbOk)
+			Set objSongData = objSearchSongList.Item(i)		'pročitaj pjesmu iz nowplaying liste
+			for each j in patternList
+				'objRE.Pattern = normalize_str(j)				'Kao traženi pojam uzmi normaliziranu riječ iz textboxa
+				objRE.Pattern = j								'Kao traženi pojam uzmi riječ iz textboxa
+					'usporedi objRE.pattern i podatke od pjesme
+				'If NOT objRE.Test(normalize_str(objSongData.ArtistName)) AND NOT objRE.Test(normalize_str(objSongData.Title)) AND NOT objRE.Test(normalize_str(objSongData.AlbumArtistName)) AND NOT objRE.Test(normalize_str(objSongData.Year)) AND NOT objRE.Test(normalize_str(objSongData.AlbumName)) AND NOT objRE.Test(normalize_str(objSongData.Path)) Then
+				If test(objSongData, objRE) Then
+					flag = False
+					Exit For
+				End If
+			Next
+			if flag Then
+				tmp_SearchSongList.Add objSongData
+				ispisi objSearchSongList, i					'Ispiši pjesmu koja odgovara traženom pojmu
+				'SDB.MessageBox "tmp.count = " & tmp_SearchSongList.Count, mtInformation, Array(mbOk)
+					'Ako smo pronašli više od max pjesama, zaustavi pretragu
+				If tmp_SearchSongList.Count >= max OR  i = objSearchSongList.Count - 1 Then
+					'SDB.MessageBox "Index = " & maxSearchIndex, mtInformation, Array(mbOk)
+					maxSearchIndex = i + 1
+					Exit Do
+				End if
+			elseif i = objSearchSongList.Count - 1 Then'ne provjerava zadnjeg!!!!!
+				maxSearchIndex = i + 1
+				Exit Do
+			End if
+			flag = True
+			i = i + 1
+		Loop
+		ex_tekst = text
+		Set objSearchSongList2 = tmp_SearchSongList				'Spremi privremenu listu u objSearchSongList2
+			'Dodaj u cache
+		If cache.Exists(text) Then
+			cache.Remove(text)
+		End if
+
+		Set item = new CacheElement
+		item.setMaxSearchIndex maxSearchIndex
+		item.setObjSearchSongList objSearchSongList2
+		cache.Add text, item
+	End Sub
+End Class
 
 Sub OnStartup
 	dim objMenuItem
@@ -102,16 +230,10 @@ Sub OnStartup
 	Script.RegisterEvent SDB, "OnPlay", "NextTrack"
 	'Script.RegisterEvent SDB, "OnPrevious", "PreviousTrack"
 	Script.RegisterEvent SDB, "OnNowPlayingModified", "OnNowPlayingModified"
+	
+	'createSearchList()
+	
 End Sub
-
-'Sub PreviousTrack
-'	SDB.MessageBox "On previous", mtInformation, Array(mbOk)
-'	Set objSongList = queuePlaylist.Tracks
-'	If objSongList.Count Then
-'		SDB.MessageBox "forcePlay", mtInformation, Array(mbOk)
-'		forcePlay = true
-'	End if
-'End Sub
 
 Sub NextTrack
 	'SDB.MessageBox "Next Track!", mtInformation, Array(mbOk)
@@ -444,122 +566,7 @@ End Sub
 	'Radi pretragu nowplaying liste na temelju unosa u textbox
 	'[in] control - textbox objekt
 Sub search(control)
-		'objRE 				- Regexp objekt za uspoređivanje stringova
-		'objSongData		- objekt za čitanje podatak o pjesmi
-		'i,j				- brojač petlje
-		'tmp_SearchSongList - privremena song lista za pohranu rezultata pretrage
-		'patternList		- lista s riječima unesenog teksta
-		'flag				- zastavica za provjeru je li petlja dosla do kraja
-	dim objRE, objSongData, i, tmp_SearchSongList, patternList, j, flag, item
-	flag = True
-	Set objRE = New RegExp
-	objRE.IgnoreCase = True						'Case unsensitive
-	objRE.Pattern = ex_tekst					'Kao traženi pojam uzmi tekst iz textboxa
-	
-	patternList = Split(control.text, " ")
-	brisiLB										'Briši pjesme iz LB-a
-	Set tmp_SearchSongList = SDB.NewSongList	'Napravi privremenu song listu
-	
-		'Ako nije unesen tekst izlistaj max pjesama oko trenutne i izađi iz procedure
-	if control.text = "" Then
-		maxSearchIndex = 0
-		'SDB.MessageBox "Tekst: " & control.text & ", index: " & maxSearchIndex, mtInformation, Array(mbOk)
-		objSearchSongList2 = Empty
-		ListSongs
-		Exit Sub
-		'Prvo prođi kroz dosad filtriranu listu ako postoji i ako nije brisan znak iz prethodnog unosa
-	Elseif not objRE.Test(control.text) Then
-		'SDB.MessageBox "Info", mtInformation, Array(mbOk)
-		maxSearchIndex = 0
-		if isObject(objSearchSongList2) Then
-			objSearchSongList2 = Empty
-		End if
-	End if
-		'Provjeri postoji li u cacheu
-	If cache.Exists(control.text) Then
-		Set item = cache(control.text)
-		maxSearchIndex = item.getMaxSearchIndex
-		Set tmp_SearchSongList = item.getObjSearchSongList
-		objSearchSongList2 = Empty
-			'Ispiši pjesme iz liste
-		for i = 0 to tmp_SearchSongList.Count - 1
-			ispisi tmp_SearchSongList, i
-		Next
-		'SDB.MessageBox "Index = " & maxSearchIndex & "\nCount tmp: " & tmp_SearchSongList.Count, mtInformation, Array(mbOk)
-	Elseif isObject(objSearchSongList2) Then
-		'SDB.MessageBox "Lista2.Count = " & objsearchSongList2.Count, mtInformation, Array(mbOk)
-		for i = 0 to objSearchSongList2.Count - 1
-			Set objSongData = objSearchSongList2.Item(i)		'pročitaj pjesmu iz filtrirane liste
-			'for each j in patternList
-			j = patternList(UBound(patternList))
-				'SDB.MessageBox "Tekst: " & j & ", index: " & maxSearchIndex & "\n i = " & i, mtInformation, Array(mbOk)
-				
-			'objRE.Pattern = normalize_str(j)				'Kao traženi pojam uzmi normaliziranu riječ iz textboxa
-			objRE.Pattern = j								'Kao traženi pojam uzmi riječ iz textboxa
-			
-				'usporedi objRE.pattern i podatke od pjesme
-			'If NOT objRE.Test(normalize_str(objSongData.ArtistName)) AND NOT objRE.Test(normalize_str(objSongData.Title)) AND NOT objRE.Test(normalize_str(objSongData.AlbumArtistName)) AND NOT objRE.Test(normalize_str(objSongData.Year)) AND NOT objRE.Test(normalize_str(objSongData.AlbumName)) AND NOT objRE.Test(normalize_str(objSongData.Path)) Then
-			If NOT objRE.Test(objSongData.ArtistName) AND NOT objRE.Test(objSongData.Title)	AND NOT objRE.Test(objSongData.AlbumArtistName) AND NOT objRE.Test(objSongData.Year) AND NOT objRE.Test(objSongData.AlbumName) AND NOT objRE.Test(objSongData.Path) Then			
-				flag = False
-				'Exit For
-				
-			End If
-			'Next
-			if flag Then
-				'SDB.MessageBox "Pjesma: " & objSongData.Title & "-" & objSongData.ArtistName, mtInformation, Array(mbOk)
-				tmp_SearchSongList.Add objSongData
-				ispisi objSearchSongList2, i					'Ispiši pjesmu koja odgovara traženom pojmu
-				'objSearchSongList2.Delete i
-			End if
-			flag = True
-			'SDB.MessageBox "Wait" & i, mtInformation, Array(mbOk)
-		Next
-		objSearchSongList2 = Empty
-	End if
-		'Traži pjesme iz nowplaying liste (od zadnje koja je provjeravana) koje sadrže traženi pojam 
-	i = maxSearchIndex
-	'SDB.MessageBox "i = " & i & "Index = " & maxSearchIndex & " tmp.Count = " & tmp_SearchSongList.Count, mtInformation, Array(mbOk)
-	Do while i < objSearchSongList.Count AND tmp_SearchSongList.Count < max
-		'SDB.MessageBox "i = " & i & " tmp.Count = " & tmp_SearchSongList.Count, mtInformation, Array(mbOk)
-		Set objSongData = objSearchSongList.Item(i)		'pročitaj pjesmu iz nowplaying liste
-		for each j in patternList
-			'objRE.Pattern = normalize_str(j)				'Kao traženi pojam uzmi normaliziranu riječ iz textboxa
-			objRE.Pattern = j								'Kao traženi pojam uzmi riječ iz textboxa
-				'usporedi objRE.pattern i podatke od pjesme
-			'If NOT objRE.Test(normalize_str(objSongData.ArtistName)) AND NOT objRE.Test(normalize_str(objSongData.Title)) AND NOT objRE.Test(normalize_str(objSongData.AlbumArtistName)) AND NOT objRE.Test(normalize_str(objSongData.Year)) AND NOT objRE.Test(normalize_str(objSongData.AlbumName)) AND NOT objRE.Test(normalize_str(objSongData.Path)) Then
-			If NOT objRE.Test(objSongData.ArtistName) AND NOT objRE.Test(objSongData.Title)	AND NOT objRE.Test(objSongData.AlbumArtistName) AND NOT objRE.Test(objSongData.Year) AND NOT objRE.Test(objSongData.AlbumName) AND NOT objRE.Test(objSongData.Path) Then
-				flag = False
-				Exit For
-			End If
-		Next
-		if flag Then
-			tmp_SearchSongList.Add objSongData
-			ispisi objSearchSongList, i					'Ispiši pjesmu koja odgovara traženom pojmu
-			'SDB.MessageBox "tmp.count = " & tmp_SearchSongList.Count, mtInformation, Array(mbOk)
-				'Ako smo pronašli više od max pjesama, zaustavi pretragu
-			If tmp_SearchSongList.Count >= max OR  i = objSearchSongList.Count - 1 Then
-				'SDB.MessageBox "Index = " & maxSearchIndex, mtInformation, Array(mbOk)
-				maxSearchIndex = i + 1
-				Exit Do
-			End if
-		elseif i = objSearchSongList.Count - 1 Then'ne provjerava zadnjeg!!!!!
-			maxSearchIndex = i + 1
-			Exit Do
-		End if
-		flag = True
-		i = i + 1
-	Loop
-	ex_tekst = control.text
-	Set objSearchSongList2 = tmp_SearchSongList				'Spremi privremenu listu u objSearchSongList2
-		'Dodaj u cache
-	If cache.Exists(control.text) Then
-		cache.Remove(control.text)
-	End if
-
-	Set item = new CacheElement
-	item.setMaxSearchIndex maxSearchIndex
-	item.setObjSearchSongList objSearchSongList2
-	cache.Add control.text, item
+	searchObj.search(control)
 End Sub
 
 	'Promijeni mode: Jump to file <-> Queue list
@@ -957,3 +964,22 @@ Function normalize_str(strRemove)
     
     normalize_str = strRemove
 End Function
+
+Sub createSearchList
+	dim objSongData, i, Year, text
+	
+	for i = 0 to objSearchSongList.Count - 1
+		Set objSongData = objSearchSongList.Item(i)
+		dim title : title = objSongData.Title
+		
+		objSongData.Title = title
+		'Year = yearToString(objSongData)
+		
+		'text = objSongData.ArtistName + " " + objSongData.Title + " " + Year + " " + objSongData.AlbumArtistName + " " + objSongData.AlbumName + " " + objSongData.Path
+		objSearchSongList.Item(i) = objSongData
+	Next
+		'Change to optimized search
+	'Set cache = CreateObject("scripting.dictionary")
+	'Set searchObj = new OptimizedSearch
+	SDB.MessageBox "search list created "& i, mtInformation, Array(mbOk)
+End Sub
