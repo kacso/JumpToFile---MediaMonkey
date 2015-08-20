@@ -247,8 +247,11 @@ Sub OnStartup
 End Sub
 
 Sub OnTrackEnd
+	'SDB.MessageBox "Track end", mtInformation, Array(mbOk)
+	Set objSongList = queuePlaylist.Tracks
 	If objSongList.Count Then
 		forceChange = true
+		'SDB.MessageBox "Have queued files", mtInformation, Array(mbOk)
 	End if
 End Sub
 
