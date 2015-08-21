@@ -241,6 +241,7 @@ Sub OnStartup
 	Script.RegisterEvent SDB, "OnTrackEnd", "OnTrackEnd"
 	'Script.RegisterEvent SDB, "OnPrevious", "PreviousTrack"
 	Script.RegisterEvent SDB, "OnNowPlayingModified", "OnNowPlayingModified"
+	Script.RegisterEvent SDB, "OnTrackAdded", "OnTrackAdded"
 	
 	'createSearchList()
 	
@@ -863,3 +864,7 @@ Function GetEntireLibrary
 		iterator.Next
 	Loop
 End Function
+
+Sub OnTrackAdded(newTrack)
+	entireLibrary.Add newTrack
+End Sub
