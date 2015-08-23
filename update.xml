@@ -1,0 +1,8 @@
+<SoftwareVersion>
+  <VersionMajor>1</VersionMajor>
+  <VersionMinor>1</VersionMinor>
+  <VersionRelease>0</VersionRelease>
+  <VersionBuild>0</VersionBuild>
+  <NewVersionDescription>With this script you can search within nowplaying list, play selected song and you can make your on queue list</NewVersionDescription>
+  <UpdateURL>https://www.dropbox.com/s/vp5a26804pdcodb/update.xml?dl=0</UpdateURL>
+</SoftwareVersion>
