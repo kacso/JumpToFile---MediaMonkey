@@ -70,6 +70,7 @@ dim searchObj : Set searchObj = new StandardSearch
 
 dim entireLibraryIndex : entireLibraryIndex = 0
 dim nowPlayingIndex : nowPlayingIndex = 1
+dim youtubeIndex : youtubeIndex = 2
 dim selectedIndex : selectedIndex = 0
 dim selectedText : selectedText = "Entire library"
 
@@ -441,6 +442,7 @@ Sub AddItemsToDropDown(DropDownSearchList)
 	
 	DropDownSearchList.AddItem "Entire library"
 	DropDownSearchList.AddItem "Now Playing"
+	DropDownSearchList.AddItem "Youtube"
 	
 	Set rootPlaylist = SDB.PlaylistByTitle("")
 	
@@ -468,42 +470,46 @@ End Sub
 
 	'Ispiši pjesme ovisno o trenutnoj koja svira
 Sub ListSongs
-	dim objSongData, currentSongIndex, i
-	dim objSongList
-	Set objSongList = CurrentSongList
-		'Index pjesme koja trenutno svira
-	currentSongIndex = SDB.Player.CurrentSongIndex
-		'obriši prozor za pjesme
-	brisiLB
-		'Ako postoji pjesama u search listi
-	If isObject(objSearchSongList2) Then
-		for i = 0 to objSearchSongList2.Count - 1
-				ispisi objSearchSongList2, i
-		Next
-		'ako ima u nowplaying listi više od max pjesama ispiši samo max pjesama
-	Elseif objSongList.Count > max Then
-				'ako stanu sve pjesme od trenutna +- max/2 ispiši ih
-		If (currentSongIndex > max\2) And (currentSongIndex < (objSongList.Count - max\2 - 1)) Then
-			for i = currentSongIndex - max\2 to currentSongIndex + max\2
-				ispisi objSongList, i
+	If selectedIndex = youtubeIndex Then
+		brisiLB
+	Else
+		dim objSongData, currentSongIndex, i
+		dim objSongList
+		Set objSongList = CurrentSongList
+			'Index pjesme koja trenutno svira
+		currentSongIndex = SDB.Player.CurrentSongIndex
+			'obriši prozor za pjesme
+		brisiLB
+			'Ako postoji pjesama u search listi
+		If isObject(objSearchSongList2) Then
+			for i = 0 to objSearchSongList2.Count - 1
+					ispisi objSearchSongList2, i
 			Next
-				'ako je index trenutne manji od max/2 ispiši prvih max
-		Elseif currentSongIndex <= max\2 Then
-			for i = 0 to max
-				ispisi objSongList, i
-			Next
-			'inače ispiši zadnjih max
+			'ako ima u nowplaying listi više od max pjesama ispiši samo max pjesama
+		Elseif objSongList.Count > max Then
+					'ako stanu sve pjesme od trenutna +- max/2 ispiši ih
+			If (currentSongIndex > max\2) And (currentSongIndex < (objSongList.Count - max\2 - 1)) Then
+				for i = currentSongIndex - max\2 to currentSongIndex + max\2
+					ispisi objSongList, i
+				Next
+					'ako je index trenutne manji od max/2 ispiši prvih max
+			Elseif currentSongIndex <= max\2 Then
+				for i = 0 to max
+					ispisi objSongList, i
+				Next
+				'inače ispiši zadnjih max
+			Else
+				for i = objSongList.Count - max to objSongList.Count - 1
+					ispisi objSongList, i
+				Next
+			End If
+			'ako ima manje od max pjesama ispiši sve
 		Else
-			for i = objSongList.Count - max to objSongList.Count - 1
+			for i = 0 to objSongList.Count - 1
 				ispisi objSongList, i
 			Next
 		End If
-		'ako ima manje od max pjesama ispiši sve
-	Else
-		for i = 0 to objSongList.Count - 1
-			ispisi objSongList, i
-		Next
-	End If
+	End if
 End Sub
 
 	'Ispiši pjesme iz queue liste
@@ -598,6 +604,9 @@ End Function
 
 	'Pušta pjesmu koja je označena u LB
 Sub PlaySong
+	If selectedIndex = youtubeIndex Then
+		downloadMp3("oko garavo")
+	End if
 		'objSongData		- objekt tipa SongData
 	dim objSongData
 	Set objSongData = GetSelectedSongData
@@ -620,7 +629,11 @@ End Sub
 	'Radi pretragu nowplaying liste na temelju unosa u textbox
 	'[in] control - textbox objekt
 Sub search(control)
-	searchObj.search(control)
+	If selectedIndex = youtubeIndex Then
+		searchOnYoutube(control)
+	Else
+		searchObj.search(control)
+	End If
 End Sub
 
 	'Promijeni mode: Jump to file <-> Queue list
@@ -840,6 +853,8 @@ Function CurrentSongList
 	ElseIf selectedIndex = nowPlayingIndex Then
 		'SDB.MessageBox "NowPlaying", mtInformation, Array(mbOk)
 		Set CurrentSongList = SDB.Player.CurrentSongList
+	ElseIf selectedIndex = youtubeIndex Then
+		Set CurrentSongList = Nothing
 	Else
 		'SDB.MessageBox "Playlist: " + SDB.PlaylistByTitle(selectedText).Title, mtInformation, Array(mbOk)
 		Set CurrentSongList = SDB.PlaylistByTitle(selectedText).Tracks
@@ -867,4 +882,61 @@ End Function
 
 Sub OnTrackAdded(newTrack)
 	entireLibrary.Add newTrack
+End Sub
+
+Sub searchOnYoutube(control)
+	
+End Sub
+
+Sub downloadMp3(query)
+	Dim ws, command, chdirCommand, downloadCommand, Exec, FileExe, param1, param2
+	FileExe = "youtube-dl.exe"
+	param1 = "-x --audio-format mp3 -o '%appdata%/Roaming/MediaMonkey/Scripts/Auto/JumpToFile_tmp/%(title)s-%(id)s.%(ext)s'"
+	param2 = "ytsearch:"""
+	
+    Set ws = CreateObject("wscript.Shell")
+	
+	'change dir to script location
+	chdirCommand = "cd %appdata%/MediaMonkey/Scripts/Auto/"
+	'Exec = ws.run(command, 0, True)
+    'SDB.MessageBox Exec, mtInformation, Array(mbOk)
+	'ws.CurrentDirectory = "%appdata%/MediaMonkey/Scripts/Auto/"
+    downloadCommand = "%appdata%/MediaMonkey/Scripts/Auto/"&FileExe& " "& param1& " "&param2& query& """"
+	command = "cmd /c Start"&downloadCommand
+	'SDB.MessageBox "Command: " + command, mtInformation, Array(mbOk)
+	
+	'Const WshFinished = 1
+	'Const WshFailed = 2
+
+'	Dim WshShell, WshShellExec, strOutput
+'	Set WshShell = CreateObject("WScript.Shell")
+'	Set WshShellExec = WshShell.Exec(command)
+'
+'	Select Case WshShellExec.Status
+'	   Case WshFinished
+'		   strOutput = WshShellExec.StdOut.ReadAll
+'	   Case WshFailed
+'		   strOutput = WshShellExec.StdErr.ReadAll
+'	End Select
+
+	'WScript.StdOut.Write strOutput  'write results to the command line
+	'WScript.Echo strOutput          'write results to default output
+	'MsgBox strOutput                'write results in a message box
+	
+	
+	'Exec = ws.run(command, 0, True)
+	'dim fso, file
+	'Set fso  = CreateObject("Scripting.FileSystemObject")
+	'Set file = fso.OpenTextFile("c:\output.txt", 1)
+	'text = file.ReadAll
+	'file.Close
+	'SDB.MessageBox Exec, mtInformation, Array(mbOk)
+
+
+	dim objShell
+	Set objShell = CreateObject("WScript.Shell")
+	'RADIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIi
+	objShell.Run "%appdata%/MediaMonkey/Scripts/Auto/youtube-dl.exe -x --audio-format mp3 -o %appdata%\MediaMonkey\Scripts\Auto\tmp/%(title)s-%(id)s.%(ext)s' ytsearch:""oko garavo""", 0, True
+	SDB.MessageBox "Gotov", mtInformation, Array(mbOk)
+	'Set objShell = Nothing
 End Sub
