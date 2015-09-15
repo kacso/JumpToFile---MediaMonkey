@@ -1,7 +1,7 @@
 '******************************************************************************************************
 '*** Script Name:		 Jump to file
 '***
-'*** Version:			 1.0
+'*** Version:			 1.1.1.2
 '***
 '*** Script Description: With this script you can search within entireLibrary, nowplaying list or  
 '***					 any playlist, play selected song and you can make your on queue list
