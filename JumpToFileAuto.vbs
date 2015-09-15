@@ -81,6 +81,12 @@ Class StandardSearch
 		test = NOT objRE.Test(SDB.Tools.RemapASCII(objSongData.ArtistName)) AND NOT objRE.Test(SDB.Tools.RemapASCII(objSongData.Title)) AND NOT objRE.Test(SDB.Tools.RemapASCII(objSongData.AlbumArtistName)) AND NOT objRE.Test(SDB.Tools.RemapASCII(objSongData.Year)) AND NOT objRE.Test(SDB.Tools.RemapASCII(objSongData.AlbumName)) AND NOT objRE.Test(SDB.Tools.RemapASCII(objSongData.Path))
 	End Function
 
+	Private current_text
+	
+	Public Function getCurrentText
+		getCurrentText = current_text
+	End Function
+	
 	Public Sub search(control)
 			'objRE 				- Regexp objekt za uspoređivanje stringova
 			'objSongData		- objekt za čitanje podatak o pjesmi
@@ -90,6 +96,8 @@ Class StandardSearch
 			'flag				- zastavica za provjeru je li petlja dosla do kraja
 		dim objRE, objSongData, i, tmp_SearchSongList, patternList, j, flag, item
 		dim text : text = control.text
+		current_text = text
+		
 		flag = True
 		Set objRE = New RegExp
 		objRE.IgnoreCase = True						'Case unsensitive
@@ -199,6 +207,18 @@ Class StandardSearch
 		item.setMaxSearchIndex maxSearchIndex
 		item.setObjSearchSongList objSearchSongList2
 		cache.Add text, item
+	End Sub
+End Class
+
+Class YoutubeSearch
+	Private current_text
+	
+	Public Function getCurrentText
+		getCurrentText = current_text
+	End Function
+	
+	Public Sub search(control)
+		current_text = control.text
 	End Sub
 End Class
 
@@ -604,9 +624,6 @@ End Function
 
 	'Pušta pjesmu koja je označena u LB
 Sub PlaySong
-	If selectedIndex = youtubeIndex Then
-		downloadMp3("oko garavo")
-	End if
 		'objSongData		- objekt tipa SongData
 	dim objSongData
 	Set objSongData = GetSelectedSongData
@@ -629,11 +646,7 @@ End Sub
 	'Radi pretragu nowplaying liste na temelju unosa u textbox
 	'[in] control - textbox objekt
 Sub search(control)
-	If selectedIndex = youtubeIndex Then
-		searchOnYoutube(control)
-	Else
-		searchObj.search(control)
-	End If
+	searchObj.search(control)
 End Sub
 
 	'Promijeni mode: Jump to file <-> Queue list
@@ -668,23 +681,29 @@ End Sub
 
 	'Get song data of song selected in listbox
 Function GetSelectedSongData
-	dim currentSongIndex
-	currentSongIndex = SDB.Player.CurrentSongIndex	
-	If LB.ItemIndex = -1 Then
-		Set GetSelectedSongData = Nothing
-		Exit Function
-	End If
-	'Ako postoji pjesama u objSearcjSongList2 (imamo filtrirane pjesme) čitaj iz te liste
-	if isObject(objSearchSongList2) Then
-		Set GetSelectedSongData = objSearchSongList2.Item(LB.ItemIndex)
-		'Ako su ispisane sve pjesme onda ovisno o indexu trenutne pjesme odredi koji se odmak koristi od početka playliste
-		'kako bi znali koja je pjesma označena
-	elseif currentSongIndex <= max\2 OR objSearchSongList.Count < max Then
-		Set GetSelectedSongData = objSearchSongList.Item(LB.ItemIndex)
-	elseif (currentSongIndex > max \2) And (currentSongIndex < (objSearchSongList.Count - max\2 - 1)) Then
-		Set GetSelectedSongData = objSearchSongList.Item(LB.ItemIndex + currentSongIndex - max\2)
-	else
-		Set GetSelectedSongData = objSearchSongList.Item(LB.ItemIndex + objSearchSongList.Count - max)
+
+	If selectedIndex = youtubeIndex Then
+		'SDB.MessageBox "Play song " &searchObj.getCurrentText, mtInformation, Array(mbOk)
+		Set GetSelectedSongData = downloadMp3(searchObj.getCurrentText)
+	Else
+		dim currentSongIndex
+		currentSongIndex = SDB.Player.CurrentSongIndex	
+		If LB.ItemIndex = -1 Then
+			Set GetSelectedSongData = Nothing
+			Exit Function
+		End If
+		'Ako postoji pjesama u objSearcjSongList2 (imamo filtrirane pjesme) čitaj iz te liste
+		if isObject(objSearchSongList2) Then
+			Set GetSelectedSongData = objSearchSongList2.Item(LB.ItemIndex)
+			'Ako su ispisane sve pjesme onda ovisno o indexu trenutne pjesme odredi koji se odmak koristi od početka playliste
+			'kako bi znali koja je pjesma označena
+		elseif currentSongIndex <= max\2 OR objSearchSongList.Count < max Then
+			Set GetSelectedSongData = objSearchSongList.Item(LB.ItemIndex)
+		elseif (currentSongIndex > max \2) And (currentSongIndex < (objSearchSongList.Count - max\2 - 1)) Then
+			Set GetSelectedSongData = objSearchSongList.Item(LB.ItemIndex + currentSongIndex - max\2)
+		else
+			Set GetSelectedSongData = objSearchSongList.Item(LB.ItemIndex + objSearchSongList.Count - max)
+		End if
 	End if
 	AddToNowPlaying GetSelectedSongData
 End Function
@@ -841,6 +860,11 @@ End Sub
 Sub OnSearchPlaylistSelected(control)
 	selectedIndex = control.ItemIndex
 	selectedText = control.ItemText(selectedIndex)
+	If selectedText = "Youtube" Then
+		Set searchObj = new YoutubeSearch
+	Else
+		Set searchObj = new StandardSearch
+	End If
 	cache.RemoveAll
 	Set objSearchSongList = CurrentSongList
 	ListSongs
@@ -884,59 +908,26 @@ Sub OnTrackAdded(newTrack)
 	entireLibrary.Add newTrack
 End Sub
 
-Sub searchOnYoutube(control)
-	
-End Sub
 
-Sub downloadMp3(query)
-	Dim ws, command, chdirCommand, downloadCommand, Exec, FileExe, param1, param2
-	FileExe = "youtube-dl.exe"
-	param1 = "-x --audio-format mp3 -o '%appdata%/Roaming/MediaMonkey/Scripts/Auto/JumpToFile_tmp/%(title)s-%(id)s.%(ext)s'"
-	param2 = "ytsearch:"""
+Function downloadMp3(query)
+	Dim command, downloadCommand, FileExe, param1, param2
+	FileExe = "%appdata%/MediaMonkey/Scripts/Auto/youtube-dl.exe"
+	param1 = "-x --audio-format mp3 -o '%appdata%\Roaming\MediaMonkey\Scripts\Auto\JumpToFile_tmp/%(title)s-%(id)s.%(ext)s'"
+	param2 = "ytsearch:""oko garavo"""
 	
-    Set ws = CreateObject("wscript.Shell")
-	
-	'change dir to script location
-	chdirCommand = "cd %appdata%/MediaMonkey/Scripts/Auto/"
-	'Exec = ws.run(command, 0, True)
-    'SDB.MessageBox Exec, mtInformation, Array(mbOk)
-	'ws.CurrentDirectory = "%appdata%/MediaMonkey/Scripts/Auto/"
-    downloadCommand = "%appdata%/MediaMonkey/Scripts/Auto/"&FileExe& " "& param1& " "&param2& query& """"
-	command = "cmd /c Start"&downloadCommand
-	'SDB.MessageBox "Command: " + command, mtInformation, Array(mbOk)
-	
-	'Const WshFinished = 1
-	'Const WshFailed = 2
+    downloadCommand = FileExe& " "& param1& " "&param2 &""""
 
-'	Dim WshShell, WshShellExec, strOutput
-'	Set WshShell = CreateObject("WScript.Shell")
-'	Set WshShellExec = WshShell.Exec(command)
-'
-'	Select Case WshShellExec.Status
-'	   Case WshFinished
-'		   strOutput = WshShellExec.StdOut.ReadAll
-'	   Case WshFailed
-'		   strOutput = WshShellExec.StdErr.ReadAll
-'	End Select
-
-	'WScript.StdOut.Write strOutput  'write results to the command line
-	'WScript.Echo strOutput          'write results to default output
-	'MsgBox strOutput                'write results in a message box
-	
-	
-	'Exec = ws.run(command, 0, True)
-	'dim fso, file
-	'Set fso  = CreateObject("Scripting.FileSystemObject")
-	'Set file = fso.OpenTextFile("c:\output.txt", 1)
-	'text = file.ReadAll
-	'file.Close
-	'SDB.MessageBox Exec, mtInformation, Array(mbOk)
-
-
-	dim objShell
+	dim objShell, ret
 	Set objShell = CreateObject("WScript.Shell")
-	'RADIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIi
-	objShell.Run "%appdata%/MediaMonkey/Scripts/Auto/youtube-dl.exe -x --audio-format mp3 -o %appdata%\MediaMonkey\Scripts\Auto\tmp/%(title)s-%(id)s.%(ext)s' ytsearch:""oko garavo""", 0, True
-	SDB.MessageBox "Gotov", mtInformation, Array(mbOk)
-	'Set objShell = Nothing
-End Sub
+	'objShell.Run downloadCommand, 0, True
+	brisiLB
+	LB.Items.Add "Downloading " &query
+	LB.Items.Add "Please wait for download to finish..."
+	objShell.Run "%appdata%/MediaMonkey/Scripts/Auto/youtube-dl.exe -x --audio-format mp3 -o C:\Tmp\MediaMonkey\JumpToFile/""" &query &""".%(ext)s' ytsearch:""" &query & """ --no-playlist", 0, True
+	brisiLB
+	LB.Items.Add "Download finished"
+	
+	Set downloadMp3 = SDB.NewSongData
+	downloadMp3.Path = "C:\Tmp\MediaMonkey\JumpToFile\" &query &".mp3"
+	downloadMp3.Title = query
+End Function
