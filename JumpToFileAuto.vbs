@@ -917,25 +917,47 @@ Function downloadMp3(query)
 	
     downloadCommand = FileExe& " "& param1& " "&param2 &""""
 
-	dim objShell, ret, fileName
+	dim objShell, ret, filePath
 	Set objShell = CreateObject("WScript.Shell")
 	'objShell.Run downloadCommand, 0, True
 	brisiLB
 	LB.Items.Add "Downloading " &query
 	LB.Items.Add "Please wait for download to finish..."
+	'LB.Items.Add GetFilePath
 	
 	If InStr(1, query, "https://www.youtube.com/") or InStr(1, query, "http://www.youtube.com/") Then
-		fileName = Split(query, "watch?v=")(1)
-		objShell.Run "%appdata%/MediaMonkey/Scripts/Auto/youtube-dl.exe -x --audio-format mp3 -o C:\Tmp\MediaMonkey\JumpToFile/""" &fileName &""".%(ext)s' """ &query & """ --no-playlist", 0, True
+		'fileName = Split(query, "watch?v=")(1)
+		objShell.Run "%appdata%/MediaMonkey/Scripts/Auto/youtube-dl.exe -x --audio-format mp3 -o C:\Tmp\MediaMonkey\JumpToFile/%(title)s.%(ext)s' """ &query & """ --no-playlist --restrict-filenames", 0, True
 	Else
-		fileName = query
-		objShell.Run "%appdata%/MediaMonkey/Scripts/Auto/youtube-dl.exe -x --audio-format mp3 -o C:\Tmp\MediaMonkey\JumpToFile/""" &fileName &""".%(ext)s' ytsearch:""" &query & """ --no-playlist", 0, True
+		'fileName = query
+		objShell.Run "%appdata%/MediaMonkey/Scripts/Auto/youtube-dl.exe -x --audio-format mp3 -o C:\Tmp\MediaMonkey\JumpToFile/%(title)s.%(ext)s' ytsearch:""" &query & """ --no-playlist --restrict-filenames", 0, True
 	End If
 	
 	brisiLB
 	LB.Items.Add "Download finished"
 	
 	Set downloadMp3 = SDB.NewSongData
-	downloadMp3.Path = "C:\Tmp\MediaMonkey\JumpToFile\" &fileName &".mp3"
-	downloadMp3.Title = query
+	'downloadMp3.Path = "C:\Tmp\MediaMonkey\JumpToFile\" &fileName &".mp3"
+	filePath = GetFilePath
+	downloadMp3.Path = filePath
+	dim splited : splited = Split(filePath, "\")
+	downloadMp3.Title = splited(UBound(splited))
+End Function
+
+
+Function GetFilePath
+	Dim fso, path, file, recentDate, recentFile
+	Set fso = CreateObject("Scripting.FileSystemObject")
+	Set recentFile = Nothing
+	For Each file in fso.GetFolder("C:\Tmp\MediaMonkey\JumpToFile/").Files
+		If "mp3" = LCase(fso.GetExtensionName(file.Name)) Then
+			If (recentFile is Nothing) Then
+				Set recentFile = file
+			ElseIf (file.DateCreated  > recentFile.DateCreated) Then
+				Set recentFile = file
+			End If
+		End If
+	Next
+
+	GetFilePath = recentFile.Path
 End Function
