@@ -917,17 +917,25 @@ Function downloadMp3(query)
 	
     downloadCommand = FileExe& " "& param1& " "&param2 &""""
 
-	dim objShell, ret
+	dim objShell, ret, fileName
 	Set objShell = CreateObject("WScript.Shell")
 	'objShell.Run downloadCommand, 0, True
 	brisiLB
 	LB.Items.Add "Downloading " &query
 	LB.Items.Add "Please wait for download to finish..."
-	objShell.Run "%appdata%/MediaMonkey/Scripts/Auto/youtube-dl.exe -x --audio-format mp3 -o C:\Tmp\MediaMonkey\JumpToFile/""" &query &""".%(ext)s' ytsearch:""" &query & """ --no-playlist", 0, True
+	
+	If InStr(1, query, "https://www.youtube.com/") or InStr(1, query, "http://www.youtube.com/") Then
+		fileName = Split(query, "watch?v=")(1)
+		objShell.Run "%appdata%/MediaMonkey/Scripts/Auto/youtube-dl.exe -x --audio-format mp3 -o C:\Tmp\MediaMonkey\JumpToFile/""" &fileName &""".%(ext)s' """ &query & """ --no-playlist", 0, True
+	Else
+		fileName = query
+		objShell.Run "%appdata%/MediaMonkey/Scripts/Auto/youtube-dl.exe -x --audio-format mp3 -o C:\Tmp\MediaMonkey\JumpToFile/""" &fileName &""".%(ext)s' ytsearch:""" &query & """ --no-playlist", 0, True
+	End If
+	
 	brisiLB
 	LB.Items.Add "Download finished"
 	
 	Set downloadMp3 = SDB.NewSongData
-	downloadMp3.Path = "C:\Tmp\MediaMonkey\JumpToFile\" &query &".mp3"
+	downloadMp3.Path = "C:\Tmp\MediaMonkey\JumpToFile\" &fileName &".mp3"
 	downloadMp3.Title = query
 End Function
