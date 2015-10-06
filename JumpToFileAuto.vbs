@@ -1,7 +1,7 @@
 '******************************************************************************************************
 '*** Script Name:		 Jump to file
 '***
-'*** Version:			 1.1.1.2
+'*** Version:			 1.1.1.3
 '***
 '*** Script Description: With this script you can search within entireLibrary, nowplaying list or  
 '***					 any playlist, play selected song and you can make your on queue list
@@ -64,6 +64,7 @@ dim menuQueueListHotkey : menuQueueListHotkey = "q"
 dim menuJTFHotkey : menuJTFHotkey = "j"
 dim objSongList
 dim exQueuedIndex : exQueuedIndex = -1
+dim queuedSongInNowPlayingIndex
 dim forceChange : forceChange = false
 dim cache : Set cache = CreateObject("scripting.dictionary")
 dim searchObj : Set searchObj = new StandardSearch
@@ -73,7 +74,7 @@ dim nowPlayingIndex : nowPlayingIndex = 1
 dim youtubeIndex : youtubeIndex = 2
 dim selectedIndex : selectedIndex = 0
 dim selectedText : selectedText = "Entire library"
-
+dim shuffleStatus : shuffleStatus = SDB.Player.isShuffle
 dim entireLibrary
 
 Class StandardSearch
@@ -260,6 +261,7 @@ Sub OnStartup
 	
 	Script.RegisterEvent SDB, "OnPlay", "NextTrack"
 	Script.RegisterEvent SDB, "OnTrackEnd", "OnTrackEnd"
+	Script.RegisterEvent SDB, "OnTrackSkipped", "OnTrackSkipped"
 	'Script.RegisterEvent SDB, "OnPrevious", "PreviousTrack"
 	Script.RegisterEvent SDB, "OnNowPlayingModified", "OnNowPlayingModified"
 	Script.RegisterEvent SDB, "OnTrackAdded", "OnTrackAdded"
@@ -268,29 +270,39 @@ Sub OnStartup
 	
 End Sub
 
+Sub OnTrackSkipped(song)
+	OnTrackEnd
+End Sub
+
 Sub OnTrackEnd
 	'SDB.MessageBox "Track end", mtInformation, Array(mbOk)
 	Set objSongList = queuePlaylist.Tracks
 	If objSongList.Count Then
 		forceChange = true
+		queuedSongInNowPlayingIndex = MoveAfterCurrent
 		'SDB.MessageBox "Have queued files", mtInformation, Array(mbOk)
 	End if
 End Sub
 
 Sub NextTrack
 	'SDB.MessageBox "Next Track!", mtInformation, Array(mbOk)
+	dim currentSongIndex : currentSongIndex = SDB.Player.CurrentSongIndex
 	Set objSongList = queuePlaylist.Tracks
 		'Ako ima pjesama u queue listi pusti iz nje
-	If objSongList.Count AND SDB.Player.CurrentSongIndex <> exQueuedIndex AND forceChange Then
+	If objSongList.Count AND currentSongIndex <> exQueuedIndex AND forceChange Then
 		forceChange = False
+		SDB.Player.isShuffle = shuffleStatus
 		Set objSearchSongList = CurrentSongList
-		PlayQueuedSong
+		'PlayQueuedSong
 		exQueuedIndex = FindSongIndex(objSongList.Item(0))
 		queuePlaylist.RemoveTrackNoConfirmation objSongList.Item(0)
 		Set objSongList = queuePlaylist.Tracks
 		If objSongList.Count = 0 Then
 			exQueuedIndex = -1
 		End if
+		
+		SDB.Player.PlaylistMoveTrack currentSongIndex, queuedSongInNowPlayingIndex
+		
 		BrisiLB
 		if mode = 1 Then
 			ListSongs
@@ -661,12 +673,13 @@ Sub ChangeMode
 End Sub
 
 	'Stavi označenu pjesmu iza trenutne koja svira i isključi shuffle
-Sub MoveAfterCurrent
+Function MoveAfterCurrent
 	dim currentSongIndex, objSongData
 	currentSongIndex = SDB.Player.CurrentSongIndex
 	Set objSongData = GetSelectedSongData
 	if objSongData is Nothing Then
-		Exit Sub
+		MoveAfterCurrent = -1
+		Exit Function
 	End if
 		'Preko ID-a pronađi index pjesme u NowPlaying listi
 	songIndex = FindSongIndex(objSongData)
@@ -676,15 +689,18 @@ Sub MoveAfterCurrent
 	Else
 		SDB.Player.PlaylistMoveTrack songIndex, currentSongIndex + 1
 	End if
+	shuffleStatus = SDB.Player.isShuffle
 	SDB.Player.isShuffle = False
-End Sub
+	MoveAfterCurrent = songIndex
+End Function
 
 	'Get song data of song selected in listbox
 Function GetSelectedSongData
-
 	If selectedIndex = youtubeIndex Then
 		'SDB.MessageBox "Play song " &searchObj.getCurrentText, mtInformation, Array(mbOk)
 		Set GetSelectedSongData = downloadMp3(searchObj.getCurrentText)
+	Elseif forceChange Then
+		Set GetSelectedSongData = objSongList.Item(0)
 	Else
 		dim currentSongIndex
 		currentSongIndex = SDB.Player.CurrentSongIndex	
