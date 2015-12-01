@@ -1,7 +1,7 @@
 '******************************************************************************************************
 '*** Script Name:		 Jump to file
 '***
-'*** Version:			 1.1.1.3
+'*** Version:			 1.1.1.4
 '***
 '*** Script Description: With this script you can search within entireLibrary, nowplaying list or  
 '***					 any playlist, play selected song and you can make your on queue list
@@ -943,10 +943,10 @@ Function downloadMp3(query)
 	
 	If InStr(1, query, "https://www.youtube.com/") or InStr(1, query, "http://www.youtube.com/") Then
 		'fileName = Split(query, "watch?v=")(1)
-		objShell.Run "%appdata%/MediaMonkey/Scripts/Auto/youtube-dl.exe -x --audio-format mp3 -o C:\Tmp\MediaMonkey\JumpToFile/%(title)s.%(ext)s' """ &query & """ --no-playlist --restrict-filenames", 0, True
+		objShell.Run """%appdata%/MediaMonkey/Scripts/Auto/youtube-dl.exe"" -x --audio-format mp3 -o C:\Tmp\MediaMonkey\JumpToFile/%(title)s.%(ext)s' """ &query & """ --no-playlist --restrict-filenames", 0, True
 	Else
 		'fileName = query
-		objShell.Run "%appdata%/MediaMonkey/Scripts/Auto/youtube-dl.exe -x --audio-format mp3 -o C:\Tmp\MediaMonkey\JumpToFile/%(title)s.%(ext)s' ytsearch:""" &query & """ --no-playlist --restrict-filenames", 0, True
+		objShell.Run """%appdata%/MediaMonkey/Scripts/Auto/youtube-dl.exe"" -x --audio-format mp3 -o C:\Tmp\MediaMonkey\JumpToFile/%(title)s.%(ext)s' ytsearch:""" &query & """ --no-playlist --restrict-filenames", 0, True
 	End If
 	
 	brisiLB
