@@ -1,7 +1,7 @@
 '******************************************************************************************************
 '*** Script Name:		 Jump to file
 '***
-'*** Version:			 1.1.1.5
+'*** Version:			 1.1.1.6
 '***
 '*** Script Description: With this script you can search within entireLibrary, nowplaying list or  
 '***					 any playlist, play selected song and you can make your on queue list
@@ -238,6 +238,13 @@ Sub OnStartup
 	objMenuItem.Visible = True
 	
 	Set objMenuItem = SDB.UI.AddMenuItem(SDB.UI.Menu_Pop_NP_MainWindow, 2, 1)
+	objMenuItem.Caption = "Add to &queue list"
+	objMenuItem.Shortcut = menuAddToQueueHotkey
+	objMenuItem.UseScript = Script.ScriptPath
+	objMenuItem.OnClickFunc = "OnAddToQueueMenuClicked"
+	objMenuItem.Visible = True
+		
+	Set objMenuItem = SDB.UI.AddMenuItem(SDB.UI.Menu_Pop_TrackList, 2, 1)
 	objMenuItem.Caption = "Add to &queue list"
 	objMenuItem.Shortcut = menuAddToQueueHotkey
 	objMenuItem.UseScript = Script.ScriptPath
