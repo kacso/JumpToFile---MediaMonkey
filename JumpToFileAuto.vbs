@@ -1,7 +1,7 @@
 '******************************************************************************************************
 '*** Script Name:		 Jump to file
 '***
-'*** Version:			 1.1.1.4
+'*** Version:			 1.1.1.5
 '***
 '*** Script Description: With this script you can search within entireLibrary, nowplaying list or  
 '***					 any playlist, play selected song and you can make your on queue list
@@ -42,7 +42,7 @@ End Class
 	'objSearchSongList2 	- lista filtriranih pjesama 
 	'max 					- maksimalan broj ispisanih pjesama
 	'maxSearchIndex			- index zadnje pjesme do koje je došla pretraga
-	'ex_tekst				- pamtni prethodni unos u textbox
+	'ex_tekst				- pamti prethodni unos u textbox
 	'Form					- objekt forme koja se prikazuje na ekranu
 	'mode					- 1 - Jump to file
 	'						  2 - Queue list
@@ -696,11 +696,11 @@ End Function
 
 	'Get song data of song selected in listbox
 Function GetSelectedSongData
-	If selectedIndex = youtubeIndex Then
+	If forceChange Then
+		Set GetSelectedSongData = objSongList.Item(0)
+	Elseif selectedIndex = youtubeIndex Then
 		'SDB.MessageBox "Play song " &searchObj.getCurrentText, mtInformation, Array(mbOk)
 		Set GetSelectedSongData = downloadMp3(searchObj.getCurrentText)
-	Elseif forceChange Then
-		Set GetSelectedSongData = objSongList.Item(0)
 	Else
 		dim currentSongIndex
 		currentSongIndex = SDB.Player.CurrentSongIndex	
@@ -889,7 +889,7 @@ End Sub
 Function CurrentSongList
 	If selectedIndex = entireLibraryIndex Then
 		'SDB.MessageBox "Entire library", mtInformation, Array(mbOk)
-		Set CurrentSongList = entireLibrary 'TODO
+		Set CurrentSongList = entireLibrary
 	ElseIf selectedIndex = nowPlayingIndex Then
 		'SDB.MessageBox "NowPlaying", mtInformation, Array(mbOk)
 		Set CurrentSongList = SDB.Player.CurrentSongList
@@ -927,15 +927,9 @@ End Sub
 
 Function downloadMp3(query)
 	Dim command, downloadCommand, FileExe, param1, param2
-	FileExe = "%appdata%/MediaMonkey/Scripts/Auto/youtube-dl.exe"
-	param1 = "-x --audio-format mp3 -o '%appdata%\Roaming\MediaMonkey\Scripts\Auto\JumpToFile_tmp/%(title)s-%(id)s.%(ext)s'"
-	param2 = "ytsearch:""oko garavo"""
-	
-    downloadCommand = FileExe& " "& param1& " "&param2 &""""
 
 	dim objShell, ret, filePath
 	Set objShell = CreateObject("WScript.Shell")
-	'objShell.Run downloadCommand, 0, True
 	brisiLB
 	LB.Items.Add "Downloading " &query
 	LB.Items.Add "Please wait for download to finish..."
