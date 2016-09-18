@@ -1,7 +1,7 @@
 '******************************************************************************************************
 '*** Script Name:		 Jump to file
 '***
-'*** Version:			 1.1.1.6
+'*** Version:			 1.1.1.7
 '***
 '*** Script Description: With this script you can search within entireLibrary, nowplaying list or  
 '***					 any playlist, play selected song and you can make your on queue list
@@ -277,6 +277,16 @@ Sub OnStartup
 	
 End Sub
 
+Sub OnKeyUp(Key, State)
+	'Up arrow -> 38
+	If Key = 38 Then
+		LB.ItemIndex = LB.ItemIndex - 1
+	'Down arrow -> 40
+	ElseIf Key = 40 Then
+		LB.ItemIndex = LB.ItemIndex + 1
+	End If
+End Sub
+
 Sub OnTrackSkipped(song)
 	OnTrackEnd
 End Sub
@@ -402,7 +412,10 @@ Sub IzradiFormu
 			'textbox
 		Set textbox = SDB.UI.NewEdit(Form)
 		textbox.Common.SetClientRect 5, 5, 400, 50			'veličina textboxa
+		textbox.Common.ControlName = "Search"
+		Form.ActiveControl = textbox.Common.ControlName
 		Script.RegisterEvent textbox, "OnChange", "search"	'registriraj promjenu sadržaja i pozovi search
+		Script.RegisterEvent textbox.Common, "OnKeyUp", "OnKeyUp"
 		
 			'Drop down for search list
 		Set DropDownSearchList = SDB.UI.NewDropDown(Form)
@@ -431,9 +444,9 @@ Sub IzradiFormu
 		ButtonMoveAfterCurrent.Common.SetClientRect 215, 415, 150, 20		'veličina tipke
 		ButtonMoveAfterCurrent.Caption = "Move &after current"				'naziv tipke
 		Script.RegisterEvent ButtonMoveAfterCurrent, "OnClick", "MoveAfterCurrent"	'pozovi playsong kod pritiska tipke
-		
+
 			'ChangeMode button name
-		ButtonCM.Caption = "&Open Queue list"
+		ButtonCM.Caption = "&Open Queue list"		
 	else
 		Form.Caption = "Queue list"							'Ime prozora
 			'ChangeMode button name
@@ -664,8 +677,12 @@ End Sub
 
 	'Radi pretragu nowplaying liste na temelju unosa u textbox
 	'[in] control - textbox objekt
-Sub search(control)
+'dim Progress
+Sub search(control) 
+	'Set Progress = SDB.Progress
+	'Progress.Text = SDB.Localize("Searching for files...")
 	searchObj.search(control)
+	'Set Progress = SDB.Progress
 End Sub
 
 	'Promijeni mode: Jump to file <-> Queue list
