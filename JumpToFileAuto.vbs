@@ -345,6 +345,7 @@ Sub SaveSheet( Sheet)
 	menuAddToQueueHotkey = menuAddToQueueHotkeyUI.Text
 	menuQueueListHotkey = menuQueueListHotkeyUI.Text
 	menuJTFHotkey = menuJTFHotkeyUI.Text
+	SDB.MessageBox "Please restart Mediamonkey to apply changes", mtInformation, Array(mbOk)
 End Sub
 
 
