@@ -1,7 +1,7 @@
 '******************************************************************************************************
 '*** Script Name:		 Jump to file
 '***
-'*** Version:			 1.1.1.7
+'*** Version:			 1.1.2.8
 '***
 '*** Script Description: With this script you can search within entireLibrary, nowplaying list or  
 '***					 any playlist, play selected song and you can make your on queue list
@@ -76,6 +76,7 @@ dim selectedIndex : selectedIndex = 0
 dim selectedText : selectedText = "Entire library"
 dim shuffleStatus : shuffleStatus = SDB.Player.isShuffle
 dim entireLibrary
+dim options
 
 Class StandardSearch
 	Private Function test(objSongData, objRE)
@@ -229,6 +230,24 @@ Sub OnStartup
 	Set entireLibrary = GetEntireLibrary
 	Set queuePlaylist = SDB.PlaylistByTitle("")
 	Set queuePlaylist = queuePlaylist.CreateChildPlaylist("QueuePlaylist")
+	
+	dim Regs : Set Regs = SDB.Registry
+	If Regs.OpenKey( "JumpToFile", False) Then
+		menuAddToQueueHotkey = Regs.StringValue("menuAddToQueueHotkey")
+		menuQueueListHotkey = Regs.StringValue("menuQueueListHotkey")
+		menuJTFHotkey = Regs.StringValue("menuJTFHotkey")
+		Regs.CloseKey
+	ElseIf Regs.OpenKey( "JumpToFile", True) Then
+		Regs.StringValue("menuAddToQueueHotkey") = menuAddToQueueHotkey
+		Regs.StringValue("menuQueueListHotkey") = menuQueueListHotkey
+		Regs.StringValue("menuJTFHotkey") = menuJTFHotkey
+		Regs.CloseKey
+	End If
+			
+	options = SDB.UI.AddOptionSheet( "Jump to file", Script.ScriptPath, "InitSheet", "SaveSheet", 0)
+	
+	
+	
 		'Add to queue list menu
 	Set objMenuItem = SDB.UI.AddMenuItem(SDB.UI.Menu_Pop_NP, 2, 1)
 	objMenuItem.Caption = "Add to &queue list"
@@ -276,6 +295,58 @@ Sub OnStartup
 	'createSearchList()
 	
 End Sub
+
+Sub InitSheet( Sheet)
+	  ' Create a simple sheet with an edit line and a button
+	dim UI : Set UI = SDB.UI
+	' Create Add to Queue Hotkey edit line	
+	dim menuAddToQueueHotkeyLabel : Set menuAddToQueueHotkeyLabel = UI.NewLabel( Sheet)
+	menuAddToQueueHotkeyLabel.Common.SetRect 20, 20, 200, 20
+	menuAddToQueueHotkeyLabel.Caption = "Add to Queue Hotkey:"
+	
+	dim menuAddToQueueHotkeyUI : Set menuAddToQueueHotkeyUI = UI.NewEdit( Sheet)
+	menuAddToQueueHotkeyUI.Common.SetRect 200, 20, 150, 20
+	menuAddToQueueHotkeyUI.Text = menuAddToQueueHotkey
+	menuAddToQueueHotkeyUI.Common.ControlName = "menuAddToQueueHotkey"
+	
+	' Create Queue List Hotkey edit line
+	dim menuQueueListHotkeyLabel : Set menuQueueListHotkeyLabel = UI.NewLabel( Sheet)
+	menuQueueListHotkeyLabel.Common.SetRect 20, 50, 200, 20
+	menuQueueListHotkeyLabel.Caption = "Queue List Hotkey:"
+	
+	dim menuQueueListHotkeyUI : Set menuQueueListHotkeyUI = UI.NewEdit( Sheet)
+	menuQueueListHotkeyUI.Common.SetRect 200, 50, 150, 20
+	menuQueueListHotkeyUI.Text = menuQueueListHotkey
+	menuQueueListHotkeyUI.Common.ControlName = "menuQueueListHotkey"
+	
+	' Create Jump to file Hotkey edit line
+	dim menuJTFHotkeyLabel : Set menuJTFHotkeyLabel = UI.NewLabel( Sheet)
+	menuJTFHotkeyLabel.Common.SetRect 20, 80, 200, 20
+	menuJTFHotkeyLabel.Caption = "Jump to file Hotkey:"
+	
+	dim menuJTFHotkeyUI : Set menuJTFHotkeyUI = UI.NewEdit( Sheet)
+	menuJTFHotkeyUI.Common.SetRect 200, 80, 150, 20
+	menuJTFHotkeyUI.Text = menuJTFHotkey
+	menuJTFHotkeyUI.Common.ControlName = "menuJTFHotkey"
+End Sub
+ 
+Sub SaveSheet( Sheet)
+	 ' Save entered value to registry in order to be able to shown it next time
+	dim Regs : Set Regs = SDB.Registry
+	dim menuAddToQueueHotkeyUI : Set menuAddToQueueHotkeyUI = Sheet.Common.ChildControl( "menuAddToQueueHotkey")
+	dim menuQueueListHotkeyUI : Set menuQueueListHotkeyUI = Sheet.Common.ChildControl( "menuQueueListHotkey")
+	dim menuJTFHotkeyUI : Set menuJTFHotkeyUI = Sheet.Common.ChildControl( "menuJTFHotkey")
+	If Regs.OpenKey( "JumpToFile", True) Then
+		Regs.StringValue("menuAddToQueueHotkey") = menuAddToQueueHotkeyUI.Text
+		Regs.StringValue("menuQueueListHotkey") = menuQueueListHotkeyUI.Text
+		Regs.StringValue("menuJTFHotkey") = menuJTFHotkeyUI.Text
+		Regs.CloseKey
+	End If
+	menuAddToQueueHotkey = menuAddToQueueHotkeyUI.Text
+	menuQueueListHotkey = menuQueueListHotkeyUI.Text
+	menuJTFHotkey = menuJTFHotkeyUI.Text
+End Sub
+
 
 Sub OnKeyUp(Key, State)
 	'Up arrow -> 38
